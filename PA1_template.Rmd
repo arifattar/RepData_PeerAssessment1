@@ -8,18 +8,179 @@ output:
 
 ## Loading and preprocessing the data
 
-
+```{r, echo = TRUE}
+activityDF <- read.csv("C:/Users/HP/Documents/Coursera/RepData_PeerAssessment1/activity/activity.csv", stringsAsFactor = FALSE)
+str(activityDF)
+activityDF$date <- as.Date(activityDF$date)
+```
 
 ## What is mean total number of steps taken per day?
+
+The total number of steps taken per day
+
+```{r, echo = TRUE}
+TotalStepsPerDay <- tapply(activityDF$steps, as.factor(activityDF$date), sum)
+```
+
+
+
+Histogram of total number of steps taken each day
+
+```{r, echo = TRUE}
+hist(TotalStepsPerDay, xlim = c(0,22000), ylim = c(0,10), breaks = 20, xlab = "Total Steps Per Day", main = "Histogram of Total Steps Per Day")
+```
+
+
+Mean of the total number of steps taken per day
+
+```{r, echo = TRUE}
+mean(TotalStepsPerDay, na.rm = TRUE)
+```
+
+
+Median of the total number of steps taken per day
+
+```{r, echo = TRUE}
+median(TotalStepsPerDay, na.rm = TRUE)
+```
 
 
 
 ## What is the average daily activity pattern?
+
+Calculating the average steps taken per interval across all days
+
+```{r, echo = TRUE}
+averageStepsPerInterval <- tapply(activityDF$steps, activityDF$interval, mean, na.rm = TRUE)
+```
+
+
+Converting the array into a data frame
+
+```{r, echo = TRUE}
+averageStepsPerInterval <- as.data.frame.table(averageStepsPerInterval)
+colnames(averageStepsPerInterval) <- c("Interval", "AverageSteps")
+head(averageStepsPerInterval)
+```
+
+
+Time-series plot of the 5-minute interval and average number of steps taken, averaged across all days
+
+```{r, fig.width = 12, echo = TRUE}
+plot(averageStepsPerInterval$Interval, averageStepsPerInterval$AverageSteps, type = "l")
+```
+
+
+Calculating the 5-minute interval which contains the maximum number of steps, averaged across all days
+
+```{r, echo = TRUE}
+averageStepsPerInterval[which.max(averageStepsPerInterval$AverageSteps),]
+```
+
+
+```{r, echo = TRUE}
+maxInterval <- averageStepsPerInterval[104, 1]
+maxSteps <- averageStepsPerInterval[104,2]
+```
+
+The 5-minute interval `r maxInterval` contains the maximum number of steps, `r maxSteps`, on average across all days
+
 
 
 
 ## Imputing missing values
 
 
+Calculating the total number of rows with NAs
+
+```{r, echo = TRUE}
+TotalNA <- sum(!complete.cases(activityDF))
+TotalNA 
+```
+
+The total number of rows with NAs is `r TotalNA` 
+
+
+Creating a new dataset that is equal to the original dataset but with the missing values in 'steps' filled in with the means of the steps for the associated 5-minute intervals across all days
+
+
+```{r, echo = TRUE}
+newactivityDF <- activityDF
+
+for (i in 1:nrow(newactivityDF)) {
+   if (is.na(newactivityDF[i, 1])) {
+      newactivityDF[i,1] <- averageStepsPerInterval$AverageSteps[averageStepsPerInterval$Interval == newactivityDF[i,3]]
+      }
+}
+
+head(newactivityDF)
+```
+
+The total number of steps taken per day
+
+```{r, echo = TRUE}
+NewTotalStepsPerDay <- tapply(newactivityDF$steps, as.factor(newactivityDF$date), sum)
+```
+
+
+
+Histogram of total number of steps taken each day
+
+```{r, echo = TRUE}
+hist(NewTotalStepsPerDay, xlim = c(0,22000), ylim = c(0,20), breaks = 20, xlab = "Total Steps Per Day", main = "Histogram of Total Steps Per Day")
+```
+
+
+Mean of the total number of steps taken per day
+
+```{r, echo = TRUE}
+mean(NewTotalStepsPerDay)
+```
+
+
+Median of the total number of steps taken per day
+
+```{r, echo = TRUE}
+median(NewTotalStepsPerDay)
+```
+
+
+Imputing missing values with the means of the steps for 5-minute intervals hasn't had any effect on the mean and median values of the total steps per day. While the mean is identical, the median has not changed significantly.
+
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
+Creating a new factor variable in the dataset with two levels - "weekday" and "weekend"
+
+
+```{r, echo = TRUE}
+newactivityDF$Day <- ifelse(weekdays(newactivityDF$date) == "Saturday" | weekdays(newactivityDF$date) == "Sunday", "weekend", "weekday")
+newactivityDF$Day <- as.factor(newactivityDF$Day)
+```
+
+Calculating the average number of steps for each 5-minute interval across all days grouped by weekends and weekdays
+
+
+```{r, echo = TRUE}
+newaverageStepsPerDay <- tapply(newactivityDF$steps, list(newactivityDF$interval, newactivityDF$Day), mean)
+```
+
+Converting newaverageStepsPerDay to a data frame
+
+
+```{r, echo = TRUE}
+newaverageStepsPerDay <- as.data.frame.table(newaverageStepsPerDay)
+str(newaverageStepsPerDay)
+```
+
+
+Time series plot of the 5-minute interval and the average number of steps taken averaged across all weekdays or weekend days
+
+
+```{r, echo = TRUE}
+newaverageStepsPerDay$Var1 <- as.integer(levels(newaverageStepsPerDay$Var1))[newaverageStepsPerDay$Var1]
+library(lattice)
+xyplot(Freq~Var1|Var2, newaverageStepsPerDay, type = "l", layout = c(1,2), xlab = "interval", ylab = "Number of steps", xlim = c(0,2500))
+```
+
